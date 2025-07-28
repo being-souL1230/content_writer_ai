@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Content Generator</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+</head>
+<body>
+    <h1>⚡ AI Content Generator</h1>
+
+    <div class="main-wrapper">
+        <div class="form-container">
+            <label for="category" class="sr-only">Content Category</label>
+            <select id="category">
+                <option value="instagram">Instagram Post</option>
+                <option value="blog">Blog Paragraph</option>
+                <option value="about">About Us</option>
+                <option value="faq">FAQs</option>
+            </select>
+
+            <label for="topic" class="sr-only">Topic</label>
+            <input type="text" id="topic" placeholder="Enter your topic..." />
+
+            <label for="model" class="sr-only">AI Model</label>
+            <select id="model">
+                <option value="cohere">Cohere</option>
+                <option value="groq">Groq</option>
+                <option value="huggingface">Hugging Face</option>
+            </select>
+
+            <div class="customization-options">
+                <label for="keywords" class="sr-only">Keywords</label>
+                <input type="text" id="keywords" placeholder="Enter keywords (comma-separated)...">
+
+                <label for="word_count" class="sr-only">Word Count</label>
+                <select id="word_count" style="display: none;">
+                    <option value="100">100 words</option>
+                    <option value="200">200 words</option>
+                    <option value="300">300 words</option>
+                    <option value="500">500 words</option>
+                </select>
+            </div>
+
+            <button onclick="generateContent()">Generate</button>
+        </div>
+
+        <div id="output"></div>
+    </div>
+
+    <!-- Loader Dialog -->
+    <div id="loaderBox">
+        <p>⏳ Generating content...</p>
+        <div class="spinner"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        let currentContent = '';
+
+        // Show/hide word count based on category
+        document.getElementById('category').addEventListener('change', function() {
+            const wordCountSelect = document.getElementById('word_count');
+            wordCountSelect.style.display = this.value === 'blog' ? 'block' : 'none';
+        });
+
+        async function generateContent() {
+            const category = document.getElementById('category').value;
+            const topic = document.getElementById('topic').value;
+            const model = document.getElementById('model').value;
+            const keywords = document.getElementById('keywords').value;
+            const word_count = document.getElementById('word_count').value;
+
+            if (!topic.trim()) {
+                alert("Please enter a topic.");
+                return;
+            }
+
+            document.getElementById('output').innerHTML = '';
+            document.getElementById('loaderBox').style.display = 'flex';
+            document.getElementById('loaderBox').style.flexDirection = 'column';
+            document.getElementById('loaderBox').style.gap = '12px';
+
+            try {
+                const res = await fetch('/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category, topic, model, keywords, word_count })
+                });
+
+                const data = await res.json();
+                document.getElementById('loaderBox').style.display = 'none';
+
+                currentContent = data.content;
+                const markdown = `### 🎯 ${data.hook}\n\n${data.content}\n\n<button onclick="enhanceContent()">Enhance Content</button>`;
+                document.getElementById('output').innerHTML = `<pre>${marked.parse(markdown)}</pre>`;
+            } catch (err) {
+                document.getElementById('loaderBox').style.display = 'none';
+                document.getElementById('output').innerHTML = '<pre class="error">❌ Error generating content.</pre>';
+            }
+        }
+
+        async function enhanceContent() {
+            const category = document.getElementById('category').value;
+            const topic = document.getElementById('topic').value;
+            const model = document.getElementById('model').value;
+            const keywords = document.getElementById('keywords').value;
+            const word_count = document.getElementById('word_count').value;
+
+            if (!currentContent) {
+                alert("No content to enhance.");
+                return;
+            }
+
+            document.getElementById('loaderBox').style.display = 'flex';
+            document.getElementById('loaderBox').style.flexDirection = 'column';
+            document.getElementById('loaderBox').style.gap = '12px';
+
+            try {
+                const res = await fetch('/enhance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category, topic, model, keywords, word_count, original_content: currentContent })
+                });
+
+                const data = await res.json();
+                document.getElementById('loaderBox').style.display = 'none';
+
+                currentContent = data.content;
+                const markdown = `### 🎯 ${data.hook}\n\n${data.content}\n\n<button onclick="enhanceContent()">Enhance Content</button>`;
+                document.getElementById('output').innerHTML = `<pre>${marked.parse(markdown)}</pre>`;
+            } catch (err) {
+                document.getElementById('loaderBox').style.display = 'none';
+                document.getElementById('output').innerHTML = '<pre class="error">❌ Error enhancing content.</pre>';
+            }
+        }
+    </script>
+</body>
+</html>
